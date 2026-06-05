@@ -1,0 +1,262 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// TENANT
+// ============================================================
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(100)
+  plan      String   @default("free") @db.VarChar(50)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users              User[]
+  leads              Lead[]
+  groups             Group[]
+  campaigns          Campaign[]
+  whatsappInstances  WhatsappInstance[]
+  auditLogs          AuditLog[]
+
+  @@map("tenants")
+}
+
+// ============================================================
+// USER
+// ============================================================
+enum UserRole {
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  USER
+}
+
+model User {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  name             String   @db.VarChar(255)
+  email            String   @db.VarChar(255)
+  passwordHash     String   @map("password_hash") @db.VarChar(255)
+  role             UserRole @default(USER)
+  active           Boolean  @default(true)
+  refreshTokenHash String?  @map("refresh_token_hash") @db.VarChar(255)
+  lastLogin        DateTime? @map("last_login")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+  auditLogs AuditLog[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+// ============================================================
+// LEAD
+// ============================================================
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  LOST
+}
+
+model Lead {
+  id        String     @id @default(uuid()) @db.Uuid
+  tenantId  String     @map("tenant_id") @db.Uuid
+  name      String     @db.VarChar(255)
+  phone     String     @db.VarChar(20)
+  email     String?    @db.VarChar(255)
+  notes     String?    @db.Text
+  tags      String[]   @default([])
+  status    LeadStatus @default(NEW)
+  source    String?    @db.VarChar(100)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  groups             LeadGroup[]
+  campaignRecipients CampaignRecipient[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, name])
+  @@map("leads")
+}
+
+// ============================================================
+// GROUP
+// ============================================================
+model Group {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leads     LeadGroup[]
+  campaigns CampaignGroup[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("groups")
+}
+
+// ============================================================
+// LEAD <-> GROUP (many-to-many)
+// ============================================================
+model LeadGroup {
+  leadId  String @map("lead_id") @db.Uuid
+  groupId String @map("group_id") @db.Uuid
+
+  lead  Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, groupId])
+  @@map("lead_groups")
+}
+
+// ============================================================
+// WHATSAPP INSTANCE
+// ============================================================
+enum InstanceStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+}
+
+model WhatsappInstance {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @map("tenant_id") @db.Uuid
+  instanceName   String         @map("instance_name") @db.VarChar(100)
+  status         InstanceStatus @default(DISCONNECTED)
+  connectionData Json?          @map("connection_data")
+  dailyLimit     Int            @default(500) @map("daily_limit")
+  sentToday      Int            @default(0) @map("sent_today")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+
+  @@unique([tenantId, instanceName])
+  @@index([tenantId])
+  @@map("whatsapp_instances")
+}
+
+// ============================================================
+// CAMPAIGN
+// ============================================================
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+}
+
+model Campaign {
+  id              String         @id @default(uuid()) @db.Uuid
+  tenantId        String         @map("tenant_id") @db.Uuid
+  createdById     String         @map("created_by_id") @db.Uuid
+  instanceId      String?        @map("instance_id") @db.Uuid
+  name            String         @db.VarChar(255)
+  description     String?        @db.Text
+  messageTemplate String         @map("message_template") @db.Text
+  status          CampaignStatus @default(DRAFT)
+  scheduledAt     DateTime?      @map("scheduled_at")
+  minDelayMs      Int            @default(3000) @map("min_delay_ms")
+  maxDelayMs      Int            @default(10000) @map("max_delay_ms")
+  totalRecipients Int            @default(0) @map("total_recipients")
+  sentCount       Int            @default(0) @map("sent_count")
+  failedCount     Int            @default(0) @map("failed_count")
+  startedAt       DateTime?      @map("started_at")
+  completedAt     DateTime?      @map("completed_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy  User               @relation(fields: [createdById], references: [id])
+  instance   WhatsappInstance?  @relation(fields: [instanceId], references: [id])
+  groups     CampaignGroup[]
+  recipients CampaignRecipient[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("campaigns")
+}
+
+// ============================================================
+// CAMPAIGN <-> GROUP (many-to-many)
+// ============================================================
+model CampaignGroup {
+  campaignId String @map("campaign_id") @db.Uuid
+  groupId    String @map("group_id") @db.Uuid
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, groupId])
+  @@map("campaign_groups")
+}
+
+// ============================================================
+// CAMPAIGN RECIPIENT
+// ============================================================
+enum RecipientStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model CampaignRecipient {
+  id           String          @id @default(uuid()) @db.Uuid
+  campaignId   String          @map("campaign_id") @db.Uuid
+  leadId       String          @map("lead_id") @db.Uuid
+  status       RecipientStatus @default(PENDING)
+  errorMessage String?         @map("error_message") @db.Text
+  sentAt       DateTime?       @map("sent_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, leadId])
+  @@index([campaignId, status])
+  @@map("campaign_recipients")
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(100)
+  entityId   String?  @map("entity_id") @db.Uuid
+  metadata   Json?
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entityType])
+  @@map("audit_logs")
+}
