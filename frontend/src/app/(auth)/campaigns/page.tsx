@@ -142,12 +142,18 @@ function CreateCampaignModal({ onClose }: { onClose: () => void }) {
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const set = (k: string, v: string | number) => setForm(f => ({ ...f, [k]: v }));
 
-  const { data: instances = [] } = useQuery({
+  const { data: rawInstances = [] } = useQuery({
     queryKey: ['instances'],
     queryFn: async () => {
       const { data } = await api.get('/whatsapp/instances');
       return data as WhatsappInstance[];
     },
+  });
+
+  // Sort: CONNECTED first, then CONNECTING, then DISCONNECTED
+  const instances = [...rawInstances].sort((a, b) => {
+    const order = { CONNECTED: 0, CONNECTING: 1, DISCONNECTED: 2 };
+    return order[a.status] - order[b.status];
   });
 
   const mut = useMutation({
@@ -190,11 +196,15 @@ function CreateCampaignModal({ onClose }: { onClose: () => void }) {
               onChange={e => set('instanceId', e.target.value)}
             >
               <option value="">Selecionar instância do WhatsApp...</option>
-              {instances.map(inst => (
-                <option key={inst.id} value={inst.id}>
-                  {inst.instanceName} ({inst.status === 'CONNECTED' ? 'Conectado' : 'Desconectado'})
-                </option>
-              ))}
+              {instances.map(inst => {
+                const statusIcon = inst.status === 'CONNECTED' ? '🟢' : inst.status === 'CONNECTING' ? '🟡' : '🔴';
+                const statusLabel = inst.status === 'CONNECTED' ? 'Conectado' : inst.status === 'CONNECTING' ? 'Conectando...' : 'Desconectado';
+                return (
+                  <option key={inst.id} value={inst.id}>
+                    {statusIcon} {inst.instanceName} — {statusLabel}
+                  </option>
+                );
+              })}
             </select>
             <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
               A instância deve estar Conectada para que você possa iniciar os envios da campanha.

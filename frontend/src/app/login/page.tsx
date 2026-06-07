@@ -124,7 +124,7 @@ export default function LoginPage() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 20 }}>
-          Demo: admin@demo.com / admin123
+          Powered by Suprema Consultoria em Tecnologia - 2026
         </p>
       </div>
     </div>

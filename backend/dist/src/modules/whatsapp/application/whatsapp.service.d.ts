@@ -5,22 +5,24 @@ export declare class WhatsappService {
     private readonly evolutionApi;
     private readonly logger;
     constructor(prisma: PrismaService, evolutionApi: EvolutionApiClient);
-    syncFromEvolution(tenantId: string): Promise<{
+    syncFromEvolution(tenantId: string, role: string): Promise<{
         synced: number;
         created: number;
         updated: number;
         disconnected: number;
     }>;
-    createInstance(tenantId: string, instanceName: string, dailyLimit?: number): Promise<{
+    createInstance(tenantId: string, role: string, instanceName: string, dailyLimit?: number): Promise<{
         instance: any;
         qrcode: string | undefined;
     }>;
-    getQrCode(tenantId: string, id: string): Promise<{
+    getQrCode(tenantId: string, role: string, id: string): Promise<{
         qrcode: string;
     }>;
-    getStatus(tenantId: string, id: string): Promise<any>;
-    findAll(tenantId: string): Promise<any>;
-    findOne(tenantId: string, id: string): Promise<any>;
-    disconnect(tenantId: string, id: string): Promise<any>;
-    remove(tenantId: string, id: string): Promise<any>;
+    getStatus(tenantId: string, role: string, id: string): Promise<any>;
+    findAll(tenantId: string, role: string): Promise<any>;
+    findOne(id: string): Promise<any>;
+    findOneScoped(tenantId: string, role: string, id: string): Promise<any>;
+    assignTenant(role: string, instanceId: string, newTenantId: string | null): Promise<any>;
+    disconnect(tenantId: string, role: string, id: string): Promise<any>;
+    remove(tenantId: string, role: string, id: string): Promise<any>;
 }

@@ -22,6 +22,7 @@ const users_module_1 = require("./modules/users/users.module");
 const campaigns_module_1 = require("./modules/campaigns/campaigns.module");
 const whatsapp_module_1 = require("./modules/whatsapp/whatsapp.module");
 const dashboard_module_1 = require("./modules/dashboard/dashboard.module");
+const tenants_module_1 = require("./modules/tenants/tenants.module");
 let AppModule = class AppModule {
     configure(consumer) {
         consumer.apply(tenant_1.TenantMiddleware).forRoutes('*');
@@ -65,6 +66,7 @@ exports.AppModule = AppModule = __decorate([
             campaigns_module_1.CampaignsModule,
             whatsapp_module_1.WhatsappModule,
             dashboard_module_1.DashboardModule,
+            tenants_module_1.TenantsModule,
         ],
     })
 ], AppModule);

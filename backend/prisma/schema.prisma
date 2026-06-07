@@ -139,8 +139,8 @@ enum InstanceStatus {
 
 model WhatsappInstance {
   id             String         @id @default(uuid()) @db.Uuid
-  tenantId       String         @map("tenant_id") @db.Uuid
-  instanceName   String         @map("instance_name") @db.VarChar(100)
+  tenantId       String?        @map("tenant_id") @db.Uuid
+  instanceName   String         @map("instance_name") @db.VarChar(100) @unique
   status         InstanceStatus @default(DISCONNECTED)
   connectionData Json?          @map("connection_data")
   dailyLimit     Int            @default(500) @map("daily_limit")
@@ -148,10 +148,9 @@ model WhatsappInstance {
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    Tenant?    @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   campaigns Campaign[]
 
-  @@unique([tenantId, instanceName])
   @@index([tenantId])
   @@map("whatsapp_instances")
 }

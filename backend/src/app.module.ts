@@ -13,6 +13,7 @@ import { UsersModule } from './modules/users/users.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { TenantsModule } from './modules/tenants/tenants.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     CampaignsModule,
     WhatsappModule,
     DashboardModule,
+    TenantsModule,
   ],
 })
 export class AppModule implements NestModule {
